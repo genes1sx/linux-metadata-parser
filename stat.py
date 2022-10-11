@@ -1,5 +1,5 @@
 import argparse
-import csv
+import sys
 import datetime
 import pandas
 
@@ -30,7 +30,7 @@ def splitFileInfo(fullpath):
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(sys.argv[1:])
     parser.add_argument('-f', dest='stat_file')
     parser.add_argument('-o', dest='output_filename')
     args = parser.parse_args()
