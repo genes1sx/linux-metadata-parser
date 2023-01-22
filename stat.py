@@ -33,7 +33,6 @@ class LinueMetaData(object):
                     elements.append(self.lines[j])
                 self.cleanning(elements)
 
-                
     def cleanning(self, data: list):
         data = list(map(lambda s: s.split(), data))
         self.fileName.append(self.get_filename(data))
@@ -92,23 +91,22 @@ def main():
         print(f"stat 명령어 결과 파일에 대한 경로를 입력하세요!")
         print(f"옵션: '-f' 또는 '--file'")
         exit(0)
-    else:
-        STAT_FILE = args.stat_file
-        
-        if args.output_file is None:
-            OUTPUT_FILE = "stat.csv" # default output file name: "stat.csv"
-        else:
-            OUTPUT_FILE = args.output_file
-    
-        p = LinueMetaData(STAT_FILE)
-        
-        # make csv file
-        df = pd.DataFrame({"File Name": p.fileName, "Size": p.size, "inode": p.inode, "Permission": p.permission, "User": p.owner, "Group": p.group, "Access Time": p.atime, "Modify Time": p.mtime, "Change Time": p.ctime})
 
-        print("======================================================")
-        print("[!] Current UTC is " + p.utc + "!!!")
-        
-        df.to_csv(OUTPUT_FILE, index=False)
+    STAT_FILE = args.stat_file
+    if args.output_file is None:
+        OUTPUT_FILE = "stat.csv" # default output file name: "stat.csv"
+    else:
+        OUTPUT_FILE = args.output_file
+
+    p = LinueMetaData(STAT_FILE)
+    
+    # make csv file
+    df = pd.DataFrame({"File Name": p.fileName, "Size": p.size, "inode": p.inode, "Permission": p.permission, "User": p.owner, "Group": p.group, "Access Time": p.atime, "Modify Time": p.mtime, "Change Time": p.ctime})
+
+    print("======================================================")
+    print("[!] Current UTC is " + p.utc + "!!!")
+    
+    df.to_csv(OUTPUT_FILE, index=False)
 
 if __name__ == "__main__":
     main()
