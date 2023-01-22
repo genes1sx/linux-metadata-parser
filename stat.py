@@ -23,10 +23,8 @@ class LinueMetaData(object):
             self.utc = self.lines[4].split()[-1]
             if 'Birth' not in self.lines[7]: # Birth 정보가 있는 파일
                 JMP_IDX = 7 # Birth: 가 존재하면 step 8
-            else:
-                JMP_IDX = 8 
-            # except IndexError as e: # Birth 정보가 없는 파일
-            #     JMP_IDX = 7 # Birth: 가 존재하지 않으면 step  7
+            else: # Birth 정보가 없는 파일
+                JMP_IDX = 8 # Birth: 가 존재하지 않으면 step  7
             
             data = []
             for i in range(0, len(self.lines), JMP_IDX):
