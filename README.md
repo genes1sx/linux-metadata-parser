@@ -42,12 +42,6 @@ Excute with a Python
 python stat.py -f "C:\Temp\stat.meta" -o stat.csv
 ```
 
-Excute with a EXE binary
-
-```powershell
-stat_x64.exe -f "C:\Temp\stat.meta" -o stat.csv
-```
-
 ## For 4n6
 
 View CSV and Excel files, filter, group, sort, etc. with ease
