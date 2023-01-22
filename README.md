@@ -1,4 +1,4 @@
-# stat.csv
+# linux-metadata-parser
 
 `stat` is provided binary from Linux system.  
 This binary will be display file or file system status and and it's really helpful for linux filesystem forensic.
