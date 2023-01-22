@@ -1,102 +1,116 @@
 import argparse
 import sys
 import datetime
-import pandas
-
-# constants
-FILE = []
-FILE_PATH = []
-FILE_NAME = []
-SIZE = []
-INODE = []
-ACESS = []
-UID = []
-GID = []
-ATIME = []
-MTIME = []
-CTIME = []
-BTIME = []
+import re
+import pandas as pd
 
 
-def getTimeStamp(timeList):
-    if len(timeList) == 3:
-        UTC_INFO = timeList[2]
+class LinueMetaData(object):
+    def __init__(self, infile):
+        
+        self.fileName = []
+        self.size = []
+        self.inode = []
+        self.permission = []
+        self.owner = []
+        self.group = []
+        self.atime = []
+        self.mtime = []
+        self.ctime = []
+        
+        with open(infile, 'r', encoding='utf-8') as infile:
+            self.lines = [l.rstrip() for l in infile.readlines()]
+            self.utc = self.lines[4].split()[-1]
+            if 'Birth' not in self.lines[7]: # Birth 정보가 있는 파일
+                JMP_IDX = 7 # Birth: 가 존재하면 step 8
+            else:
+                JMP_IDX = 8 
+            # except IndexError as e: # Birth 정보가 없는 파일
+            #     JMP_IDX = 7 # Birth: 가 존재하지 않으면 step  7
+            
+            data = []
+            for i in range(0, len(self.lines), JMP_IDX):
+                elements = []
+                for j in range(i, i+7):
+                    elements.append(self.lines[j])
+                self.cleanning(elements)
+
+                
+    def cleanning(self, data: list):
+        data = list(map(lambda s: s.split(), data))
+        self.fileName.append(self.get_filename(data))
+        self.size.append(self.get_size(data))
+        self.inode.append(self.get_inode(data))
+        self.permission.append(self.get_permission(data))
+        (uid, gid) = self.get_owner(data)
+        self.owner.append(uid)
+        self.group.append(gid)
+        self.atime.append(self.get_timestamp(data, 4))
+        self.mtime.append(self.get_timestamp(data, 5))
+        self.ctime.append(self.get_timestamp(data, 6))
+
+    def get_filename(self, data: list):
+        return data[0][1].replace('‘', '').replace('’', '')
+
+    def get_size(self, data: list):
+        return data[1][1]
+
+    def get_inode(self, data: list):
+        return data[2][3]
     
-    linuxTime = ' '.join(timeList[0:2])
-    return datetime.datetime.strptime(linuxTime[:-10], "%Y-%m-%d %H:%M:%S")
-
-def splitFileInfo(fullpath):
-    pass
+    def get_permission(self, data: list):
+        return data[3][1].replace('(', '').replace(')', '').split('/')[0]
+    
+    def get_owner(self, data: list):
+        data = data[3][:]
+        uid_gid = []
+        
+        for i in data:
+            if re.match(r"\d+/.*\)", i):
+                uid_gid.append(self.get_user(i))
+            elif re.match(r"\d+/", i):
+                index = data.index(i)
+                uid_gid.append(data[index+1].replace(')', ''))
+        
+        return uid_gid
+            
+    def get_user(self, data: str):
+        return data.split('/')[1].replace(')', '')
+    
+    # TODO: AMC 시간 업데이트
+    def get_timestamp(self, data: list, mode: int):
+        timestamp = data[mode][1] + " " + data[mode][2]
+        return timestamp
 
 
 def main():
-    parser = argparse.ArgumentParser(sys.argv[1:])
-    parser.add_argument('-f', dest='stat_file')
-    parser.add_argument('-o', dest='output_filename')
-    args = parser.parse_args()
+    p = argparse.ArgumentParser(sys.argv[1:])
+    p.add_argument('-f', '--file', help="Result file of stat command", dest='stat_file')
+    p.add_argument('-o', '--out', help="Specify output file name", dest='output_file')
+    args = p.parse_args()
     
+    # input file verify
     if args.stat_file is None:
         print(f"stat 명령어 결과 파일에 대한 경로를 입력하세요!")
+        print(f"옵션: '-f' 또는 '--file'")
         exit(0)
     else:
         STAT_FILE = args.stat_file
         
-        if args.output_filename is None:
-            OUTPUT_FILE = "stat.csv"
+        if args.output_file is None:
+            OUTPUT_FILE = "stat.csv" # default output file name: "stat.csv"
         else:
-            OUTPUT_FILE = args.output_filename
+            OUTPUT_FILE = args.output_file
     
-    f = open(STAT_FILE, 'r', encoding='utf-8')
-    lines = [line.rstrip() for line in f.readlines()]
-    
-    if 'Birth' in lines[7]: # Birth 정보가 있는 파일
-        JMP_IDX = 8 # Birth: 가 존재하면 step 8
-    else: # Birth 정보가 없는 파일
-        JMP_IDX = 7 # Birth: 가 존재하지 않으면 step  7
+        p = LinueMetaData(STAT_FILE)
         
-    for i in range(0, len(lines), JMP_IDX):
-        file_fullpath = lines[i].split()[1][1:-1]
-        file_name = file_fullpath.split('/')[-1]
-        if file_name == "":
-            file_name = "."
-        # print(file_name)
-        file_path = file_fullpath.split('/')[0:-1]
-        file_path_joined = "/".join(file_path)
-        # print(file_path_joined)
-        if file_path_joined == "":
-            file_path_joined = "/"
+        # make csv file
+        df = pd.DataFrame({"File Name": p.fileName, "Size": p.size, "inode": p.inode, "Permission": p.permission, "User": p.owner, "Group": p.group, "Access Time": p.atime, "Modify Time": p.mtime, "Change Time": p.ctime})
+
+        print("======================================================")
+        print("[!] Current UTC is " + p.utc + "!!!")
         
-        # print("/".join(file_path))
-        FILE.append(file_fullpath)
-        FILE_PATH.append(file_path_joined) # FILE
-        FILE_NAME.append(file_name)
-        SIZE.append(lines[i+1].split()[1]) # SIZE
-        INODE.append(lines[i+2].split()[3]) # INODE
-        ACESS.append(lines[i+3].split()[1][1:-1]) # ACESS
-        UID.append(lines[i+3].split()[5][:-1]) # UID
-        GID.append(lines[i+3].split('/')[3][:-1]) # GID
-        ATIME.append(getTimeStamp(lines[i+4].split()[1:]).strftime("%Y-%m-%d %H:%M:%S")) # ATIME
-        MTIME.append(getTimeStamp(lines[i+5].split()[1:]).strftime("%Y-%m-%d %H:%M:%S")) # MTIME
-        CTIME.append(getTimeStamp(lines[i+6].split()[1:]).strftime("%Y-%m-%d %H:%M:%S")) # CTIME
-        if JMP_IDX != 7:
-            BTIME.append(getTimeStamp(lines[i+7].split()[1:]).strftime("%Y-%m-%d %H:%M:%S")) # BTIME
-
-    df = pandas.DataFrame(FILE, columns=['File Full Path'])
-    df['File Path'] = FILE_PATH
-    df['File Name'] = FILE_NAME
-    df['Size'] = SIZE
-    df['Inode'] = INODE
-    df['Acess Control'] = ACESS
-    df['Uid'] = UID
-    df['Gid'] = GID
-    df['Acess Time'] = ATIME
-    df['Modify Time'] = MTIME
-    df['Change Time'] = CTIME
-    if JMP_IDX != 7:
-        df['Birth Time'] = BTIME
-    
-    df.to_csv(OUTPUT_FILE, index=False)
-
+        df.to_csv(OUTPUT_FILE, index=False)
 
 if __name__ == "__main__":
     main()
